@@ -1,0 +1,7 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/Advent 2020/.vs/Advent 2020/v16
+/Advent 2020/Debug
