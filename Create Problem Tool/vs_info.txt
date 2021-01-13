@@ -1,0 +1,17 @@
+Setup
+
+Place files in ..\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\MyTools\
+
+Add new to External Tools
+Title: Create Problem
+Command: ..\Program Files (x86)\Microsoft Visual Studio\2019\Community\Common7\IDE\MyTools\create_problem.bat
+Arguments: -p $(ProjectDir) -s $(ProjectFileName) -d 
+Use Output window: X
+Prompt for arguments: X
+Treat output as Unicode: O
+
+
+Usage
+
+Create Problem
+-p $(ProjectDir) -s $(ProjectFileName) -d PROBLEM_DAY_NUMBER
