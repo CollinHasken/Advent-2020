@@ -30,6 +30,11 @@ static const property_name PROPERTY_TYPE_STRING[static_cast<int>(PROPERTY_TYPE::
 	"cid",
 };
 
+// Get the property type given a property name
+//
+// name:	The name of the property
+//
+// Returns the property type
 static PROPERTY_TYPE property_type_string_to_type(const property_name name)
 {
 	for (int i = 0; i < static_cast<int>(PROPERTY_TYPE::NUM); ++i) {
@@ -41,10 +46,12 @@ static PROPERTY_TYPE property_type_string_to_type(const property_name name)
 	return PROPERTY_TYPE::NUM;
 }
 
-class id {
+// Passport class
+class passport {
 public:
-
+	// Property of the passport
 	struct property {
+		// Constants for valid ranges
 		static constexpr int		BIRTH_YEAR_MIN			= 1920;
 		static constexpr int		BIRTH_YEAR_MAX			= 2002;
 		static constexpr int		ISSUE_YEAR_MIN			= 2010;
@@ -76,7 +83,7 @@ public:
 		PROPERTY_TYPE m_type;
 	};
 
-	id(std::ifstream& input);
+	passport(std::ifstream& input);
 
 	void set_prop(std::string& property_val);
 
@@ -94,9 +101,12 @@ public:
 		property("cid"),
 	};
 };
-const char* id::property::EYE_COLOR_VALID[id::property::EYE_COLOR_VALID_NUM] = { "amb", "blu", "brn", "gry", "grn", "hzl", "oth" };
+const char* passport::property::EYE_COLOR_VALID[passport::property::EYE_COLOR_VALID_NUM] = { "amb", "blu", "brn", "gry", "grn", "hzl", "oth" };
 
-void id::property::set_valid(const std::string& prop_val)
+// Determine and set whether a property is vaid based on the passed in value
+//
+// prop_val:	The value for the property
+void passport::property::set_valid(const std::string& prop_val)
 {
 	switch (m_type)
 	{
@@ -183,7 +193,7 @@ void id::property::set_valid(const std::string& prop_val)
 	}
 }
 
-id::id(std::ifstream& input)
+passport::passport(std::ifstream& input)
 {
 	while (!input.eof()) {
 		std::string input_line;
@@ -196,21 +206,26 @@ id::id(std::ifstream& input)
 		std::string property_val;
 		std::istringstream input_line_stream(input_line);
 
+		// Set each property
 		while (std::getline(input_line_stream, property_val, ' ')) {
 			set_prop(property_val);
 		}
 	}
 }
 
-void id::set_prop(std::string& property_val)
+// Set a property for the passport
+//
+// property_val:	The property key and value line
+void passport::set_prop(std::string& property_pair)
 {
-	std::size_t colon_pos = property_val.find_first_of(':');
+	std::size_t colon_pos = property_pair.find_first_of(':');
 	if (colon_pos == std::string::npos) {
 		return;
 	}
 
-	std::string prop = property_val.substr(0, colon_pos);
-	std::string val = property_val.substr(colon_pos + 1);
+	// Extract the property and value
+	std::string prop = property_pair.substr(0, colon_pos);
+	std::string val = property_pair.substr(colon_pos + 1);
 
 	property_name prop_name;
 	prop.copy(prop_name, 3);
@@ -221,6 +236,7 @@ void id::set_prop(std::string& property_val)
 		return;
 	}
 
+	// Set the property
 	for (property& prop : m_props) {
 		if (prop.m_type != type) {
 			continue;
@@ -232,7 +248,10 @@ void id::set_prop(std::string& property_val)
 	}
 }
 
-bool id::is_set_passport() const
+// Check if all the properties (optionally CID) are set
+//
+// Returns true if all (optionally CID) are set
+bool passport::is_set_passport() const
 {
 	for (const property& prop : m_props) {
 		if (!prop.m_is_set) {
@@ -244,7 +263,10 @@ bool id::is_set_passport() const
 	return true;
 }
 
-bool id::is_valid_passport() const
+// Check if all the properties (optionally CID) have valid values
+//
+// Returns true if all (optionally CID) have valid values
+bool passport::is_valid_passport() const
 {
 	for (const property& prop : m_props) {
 		if (!prop.m_is_valid) {
@@ -256,6 +278,15 @@ bool id::is_valid_passport() const
 	return true;
 }
 
+
+/*
+* Detect which passports have all required fields 
+* Passport data is validated in batch files (your puzzle input). Each passport 
+* is represented as a sequence of key:value pairs separated by spaces or newlines.
+* Passports are separated by blank lines. Missing cid is fine.
+*/
+
+// Count the number of valid passports - those that have all required fields. Treat cid as optional
 void problem_1::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);
@@ -266,17 +297,32 @@ void problem_1::solve(const std::string& file_name)
 
 	int valid_passports = 0;
 	while (!input.eof()) {
-		id new_id(input);
+		passport new_id(input);
+		// Only care if they have fields set
 		if (new_id.is_set_passport()) {
 			++valid_passports;
 		}
 	}
-
 	input.close();
 
-	std::cout << valid_passports;
+	output_answer(std::to_string(valid_passports));
 }
 
+/*
+* You can continue to ignore the cid field, but each other field has strict rules about what values are valid for automatic validation:
+* byr (Birth Year) - four digits; at least 1920 and at most 2002.
+* iyr (Issue Year) - four digits; at least 2010 and at most 2020.
+* eyr (Expiration Year) - four digits; at least 2020 and at most 2030.
+* hgt (Height) - a number followed by either cm or in:
+*   If cm, the number must be at least 150 and at most 193.
+*   If in, the number must be at least 59 and at most 76.
+* hcl (Hair Color) - a # followed by exactly six characters 0-9 or a-f.
+* ecl (Eye Color) - exactly one of: amb blu brn gry grn hzl oth.
+* pid (Passport ID) - a nine-digit number, including leading zeroes.
+* cid (Country ID) - ignored, missing or not.
+*/
+
+// Count the number of valid passports - those that have all required fields and valid values
 void problem_2::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);
@@ -287,13 +333,13 @@ void problem_2::solve(const std::string& file_name)
 
 	int valid_passports = 0;
 	while (!input.eof()) {
-		id new_id(input);
+		passport new_id(input);
+		// Need to check if it's actually valid
 		if (new_id.is_valid_passport()) {
 			++valid_passports;
 		}
 	}
-
 	input.close();
 
-	std::cout << valid_passports;
+	output_answer(std::to_string(valid_passports));
 }

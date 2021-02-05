@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -150,23 +150,22 @@
     <ClCompile Include="problems\days\day_7.cpp" />
     <ClCompile Include="problems\days\day_8.cpp" />
     <ClCompile Include="problems\days\day_9.cpp" />
-    <ClCompile Include="problems\problems.cpp" />
-	<ClCompile Include="problems\days\day_11.cpp" />
-	<ClCompile Include="problems\days\day_12.cpp" />
-	<ClCompile Include="problems\days\day_13.cpp" />
-	<ClCompile Include="problems\days\day_14.cpp" />
-	<ClCompile Include="problems\days\day_15.cpp" />
-	<ClCompile Include="problems\days\day_16.cpp" />
-	<ClCompile Include="problems\days\day_17.cpp" />
-	<ClCompile Include="problems\days\day_18.cpp" />
-	<ClCompile Include="problems\days\day_19.cpp" />
-	<ClCompile Include="problems\days\day_20.cpp" />
-	<ClCompile Include="problems\days\day_21.cpp" />
-	<ClCompile Include="problems\days\day_22.cpp" />
-	<ClCompile Include="problems\days\day_23.cpp" />
-	<ClCompile Include="problems\days\day_24.cpp" />
-	<ClCompile Include="problems\days\day_25.cpp" />
-	</ItemGroup>
+    <ClCompile Include="problems\days\day_11.cpp" />
+    <ClCompile Include="problems\days\day_12.cpp" />
+    <ClCompile Include="problems\days\day_13.cpp" />
+    <ClCompile Include="problems\days\day_14.cpp" />
+    <ClCompile Include="problems\days\day_15.cpp" />
+    <ClCompile Include="problems\days\day_16.cpp" />
+    <ClCompile Include="problems\days\day_17.cpp" />
+    <ClCompile Include="problems\days\day_18.cpp" />
+    <ClCompile Include="problems\days\day_19.cpp" />
+    <ClCompile Include="problems\days\day_20.cpp" />
+    <ClCompile Include="problems\days\day_21.cpp" />
+    <ClCompile Include="problems\days\day_22.cpp" />
+    <ClCompile Include="problems\days\day_23.cpp" />
+    <ClCompile Include="problems\days\day_24.cpp" />
+    <ClCompile Include="problems\days\day_25.cpp" />
+  </ItemGroup>
   <ItemGroup>
     <ClInclude Include="problems\common_includes.h" />
     <ClInclude Include="problems\days\day_1.h" />
@@ -181,22 +180,22 @@
     <ClInclude Include="problems\days\day_9.h" />
     <ClInclude Include="problems\problem.h" />
     <ClInclude Include="problems\problems.h" />
-	<ClInclude Include="problems\days\day_11.h" />
-	<ClInclude Include="problems\days\day_12.h" />
-	<ClInclude Include="problems\days\day_13.h" />
-	<ClInclude Include="problems\days\day_14.h" />
-	<ClInclude Include="problems\days\day_15.h" />
-	<ClInclude Include="problems\days\day_16.h" />
-	<ClInclude Include="problems\days\day_17.h" />
-	<ClInclude Include="problems\days\day_18.h" />
-	<ClInclude Include="problems\days\day_19.h" />
-	<ClInclude Include="problems\days\day_20.h" />
-	<ClInclude Include="problems\days\day_21.h" />
-	<ClInclude Include="problems\days\day_22.h" />
-	<ClInclude Include="problems\days\day_23.h" />
-	<ClInclude Include="problems\days\day_24.h" />
-	<ClInclude Include="problems\days\day_25.h" />
-	</ItemGroup>
+    <ClInclude Include="problems\days\day_11.h" />
+    <ClInclude Include="problems\days\day_12.h" />
+    <ClInclude Include="problems\days\day_13.h" />
+    <ClInclude Include="problems\days\day_14.h" />
+    <ClInclude Include="problems\days\day_15.h" />
+    <ClInclude Include="problems\days\day_16.h" />
+    <ClInclude Include="problems\days\day_17.h" />
+    <ClInclude Include="problems\days\day_18.h" />
+    <ClInclude Include="problems\days\day_19.h" />
+    <ClInclude Include="problems\days\day_20.h" />
+    <ClInclude Include="problems\days\day_21.h" />
+    <ClInclude Include="problems\days\day_22.h" />
+    <ClInclude Include="problems\days\day_23.h" />
+    <ClInclude Include="problems\days\day_24.h" />
+    <ClInclude Include="problems\days\day_25.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

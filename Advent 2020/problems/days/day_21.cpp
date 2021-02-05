@@ -12,6 +12,7 @@ PROBLEM_CLASS_CPP(21);
 typedef std::string id;
 typedef std::set<id> ids;
 
+// Ingredient that has the allergens associated with it
 class ingredient {
 public:
 	ingredient(const id& id) : m_id(id) {};
@@ -25,6 +26,7 @@ public:
 	bool m_known_allergen = false;
 };
 
+// Allergen that has the ingredients associated with it
 class allergen {
 public:
 	allergen(const id& allergen_id, const ids& ingredient_ids);
@@ -43,14 +45,21 @@ typedef std::map<id, allergen> allergy_map;
 allergy_map Allergens;
 ingredient_map Ingredients;
 
+// Remove an allergen from the ingredient's list of allergens associated with it
+// 
+// allergen_id:	ID of allergen to remove
 void ingredient::remove_allergen(const id& allergen_id)
 {
 	m_allergen_ids.erase(allergen_id);
 }
 
+// Mark this ingredient's known allergen
+//
+// known_allergen_id:	ID of the allergen matched with this ingredient
 void ingredient::mark_as_known(const id& known_allergen_id)
 {
 	m_known_allergen = true;
+	// Remove this ingredient from any remaining associated allergen's ingredients list
 	for (const id& allergen_id : m_allergen_ids) {
 		if (allergen_id.compare(known_allergen_id) == 0) {
 			continue;
@@ -61,6 +70,10 @@ void ingredient::mark_as_known(const id& known_allergen_id)
 	m_allergen_ids = ids{ known_allergen_id };
 }
 
+// Initialize an allergen with associated ingredients
+//
+// allergen_id:		ID for the allergen
+// ingredient_ids:	IDs of ingredients that are associated with this
 allergen::allergen(const id& allergen_id, const ids& ingredient_ids) : m_id(allergen_id)
 {
 	// Add all non-known ingredients as possible allergens
@@ -76,6 +89,9 @@ allergen::allergen(const id& allergen_id, const ids& ingredient_ids) : m_id(alle
 	check_for_known_ingredient();
 }
 
+// Add ingredients to the associated ingredients with this allergen that match with the existing list
+//
+// ingredient_ids:	IDs of ingredients that are associated with this
 void allergen::add_ingredients(const ids& ingredient_ids)
 {
 	// Make current ingredients that aren't found in the new list remove this as one of their allergens
@@ -104,19 +120,29 @@ void allergen::add_ingredients(const ids& ingredient_ids)
 	check_for_known_ingredient();
 }
 
+// Remove an ingredient from being associated with this allergen
+//
+// ingredient_id:	Ingredient to remove
 void allergen::remove_ingredient(const id& ingredient_id)
 {
 	m_ingredient_ids.erase(ingredient_id);
 	check_for_known_ingredient();
 }
 
+// Check if we know what ingredient causes this allergen
 void allergen::check_for_known_ingredient()
 {
+	// If there's only one left
 	if (m_ingredient_ids.size() == 1) {
 		Ingredients.find(*m_ingredient_ids.begin())->second.mark_as_known(m_id);
 	}
 }
 
+// Get the ingredients and allergens from the input
+//
+// input_stream:	(Output) Input to read
+// ingredients:	(Output) Ingredients read
+// allergens:		(Output) Allergens read
 static void get_ingredients_and_allergens(std::istringstream* input_stream, ids* ingredients, ids* allergens)
 {
 	ids* current_ids = ingredients;
@@ -134,6 +160,17 @@ static void get_ingredients_and_allergens(std::istringstream* input_stream, ids*
 	}
 }
 
+/*
+* You don't speak the local language, so you can't read any ingredients lists.
+* However, sometimes, allergens are listed in a language you do understand.
+* You should be able to use this information to determine which ingredient contains which allergen and work out which foods are safe to take with you on your trip
+* Each line includes that food's ingredients list followed by some or all of the allergens the food contains.
+* Each allergen is found in exactly one ingredient. Each ingredient contains zero or one allergen.
+* Allergens aren't always marked; when they're listed (as in (contains nuts, shellfish) after an ingredients list), the ingredient that contains each listed allergen will be somewhere in the corresponding ingredients list.
+* However, even if an allergen isn't listed, the ingredient that contains that allergen could still be present
+*/
+
+// How many times do any of ingredients that cannot possibly contain any of the allergens appear
 void problem_1::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);
@@ -161,6 +198,7 @@ void problem_1::solve(const std::string& file_name)
 			}
 		}
 
+		// Get all the allergens for it
 		for (const std::string& allergen_id : allergen_ids) {
 			auto allergen_iter = Allergens.find(allergen_id);
 			if (allergen_iter == Allergens.end()) {
@@ -171,9 +209,9 @@ void problem_1::solve(const std::string& file_name)
 			}
 		}
 	}
-
 	input.close();
 
+	// Count ingredients without allergens
 	int ingredient_count = 0;
 	for (const auto& ingredient_pair : Ingredients) {
 		if (ingredient_pair.second.m_allergen_ids.empty()) {
@@ -181,14 +219,20 @@ void problem_1::solve(const std::string& file_name)
 		}
 	}
 
+	Ingredients.clear();
+	Allergens.clear();
+
 	std::string answer;
 	answer = std::to_string(ingredient_count);
 	output_answer(answer);
-
-	Ingredients.clear();
-	Allergens.clear();
 }
 
+/*
+* Now that you've isolated the inert ingredients, you should have enough information to figure out which ingredient contains which allergen
+* Arrange the ingredients alphabetically by their allergen and separate them by commas to produce your canonical dangerous ingredient list
+*/
+
+// What is your canonical dangerous ingredient list
 void problem_2::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);
@@ -217,6 +261,7 @@ void problem_2::solve(const std::string& file_name)
 			}
 		}
 
+		// Get all the allergens for it
 		for (const std::string& allergen_id : allergen_ids) {
 			auto allergen_iter = Allergens.find(allergen_id);
 			if (allergen_iter == Allergens.end()) {
@@ -231,6 +276,7 @@ void problem_2::solve(const std::string& file_name)
 
 	input.close();
 
+	// Concat the ingredients for each allergen
 	std::string ingredient_list;
 	for (const auto& cur_allergen : Allergens) {
 		ingredient_list.append(*(cur_allergen.second.m_ingredient_ids.begin()));

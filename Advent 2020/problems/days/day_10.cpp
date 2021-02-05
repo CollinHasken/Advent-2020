@@ -16,6 +16,14 @@ static bool adaptor_cmp(const adaptor_combo& lhs, const adaptor_combo& rhs)
 	return lhs.first < rhs.first;
 }
 
+/*
+* Each of your joltage adapters is rated for a specific output joltage (your puzzle input).
+* Any given adapter can take an input 1, 2, or 3 jolts lower than its rating and still produce its rated output joltage.
+* In addition, your device has a built-in joltage adapter rated for 3 jolts higher than the highest-rated adapter in your bag
+* use every adapter in your bag at once, what is the distribution of joltage differences between the charging outlet, the adapters, and your device
+*/
+
+// What is the number of 1-jolt differences multiplied by the number of 3-jolt differences
 void problem_1::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);
@@ -69,6 +77,12 @@ void problem_1::solve(const std::string& file_name)
 	output_answer(answer); 
 }
 
+/*
+* You'll need to figure out how many different ways they can be arranged.
+* Every arrangement needs to connect the charging outlet to your device
+*/
+
+// What is the total number of distinct ways you can arrange the adapters to connect the charging outlet to your device
 void problem_2::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);

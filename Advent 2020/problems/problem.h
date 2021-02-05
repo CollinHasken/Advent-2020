@@ -41,6 +41,8 @@ class problem {
 public:
 	problem(int problem_num) : m_problem_number(problem_num) {};
 	virtual void solve(const std::string& file_name) = 0;
+
+	// Output the answer and automatically put it in the clipboard
 	void output_answer(const std::string& answer) {
 		if (answer.empty()) {
 			return;

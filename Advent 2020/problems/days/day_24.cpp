@@ -63,9 +63,16 @@ direction string_to_direction(const std::string& dir_s)
 	return direction::NUM_DIRECTIONS;
 }
 
+// Determine the coordinates for the neighbor in a given direction
+//
+// cur_coord:		Coord to start from
+// neighbor_dir:	Direction to get
+//
+// Returns the coord of the neighbor
 coord get_neighbor_coord(const coord& cur_coord, direction neighbor_dir)
 {
 	coord neighbor_coord = cur_coord;
+	// See the block note at the top for how this is determined
 	switch (neighbor_dir)
 	{
 	case direction::W:
@@ -104,6 +111,12 @@ coord get_neighbor_coord(const coord& cur_coord, direction neighbor_dir)
 	return neighbor_coord;
 }
 
+// Get the next direction from the input
+//
+// cur_index:	The index we're currently at
+// directions:	The direction string
+//
+// Returns the next direction
 direction get_next_direction_from_path(size_t* cur_index, const std::string& directions)
 {
 	if (directions[*cur_index] == 'n' || directions[*cur_index] == 's') {
@@ -113,6 +126,11 @@ direction get_next_direction_from_path(size_t* cur_index, const std::string& dir
 	return string_to_direction(directions.substr((*cur_index)++, 1));
 }
 
+// Get the coordinate for the direction input
+//
+// directions:	List of directions to get to the tile
+//
+// Returns the coordinate of the tile the direction points to
 coord get_tile_coord(const std::string& directions)
 {
 	coord tile_coord;
@@ -123,6 +141,13 @@ coord get_tile_coord(const std::string& directions)
 	return tile_coord;
 }
 
+// Whether the given tile should flip
+//
+// cur_black_tiles:		The current black tile state
+// cur_coord:				Coord to check
+// is_currently_white:	Whether the tile is currently white
+//
+// Returns true if the tile should flip
 bool tile_should_flip(const tiles& cur_black_tiles, const coord& cur_coord, bool is_currently_white)
 {
 	// Count the amount of black tile neighbors
@@ -140,6 +165,10 @@ bool tile_should_flip(const tiles& cur_black_tiles, const coord& cur_coord, bool
 	return is_currently_white ? num_black_neighbors == 2 : num_black_neighbors == 0;
 }
 
+// Get the next day's black tiles
+//
+// next_day_black_tiles:	(Output) Next day's black tiles
+// cur_black_tiles:			The current black tiles
 void get_next_day_black_tiles(tiles* next_day_black_tiles, const tiles& cur_black_tiles)
 {
 	tiles white_tiles;
@@ -170,6 +199,18 @@ void get_next_day_black_tiles(tiles* next_day_black_tiles, const tiles& cur_blac
 	}
 }
 
+/*
+* The tiles are all hexagonal; they need to be arranged in a hex grid with a very specific color pattern
+* The tiles are all white on one side and black on the other.
+* They start with the white side facing up. The lobby is large enough to fit whatever pattern might need to appear there
+* A member of the renovation crew gives you a list of the tiles that need to be flipped over (your puzzle input).
+* Each line in the list identifies a single tile that needs to be flipped by giving a series of steps starting from a reference tile in the very center of the room
+* Every tile has six neighbors: east, southeast, southwest, west, northwest, and northeast
+* A tile is identified by a series of these directions with no delimiters
+* Each time a tile is identified, it flips from white to black or from black to white
+*/
+
+// How many tiles are left with the black side up
 void problem_1::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);
@@ -184,9 +225,11 @@ void problem_1::solve(const std::string& file_name)
 		std::getline(input, next_tile);
 		coord next_tile_id = get_tile_coord(next_tile);
 		tiles::iterator black_tile = cur_black_tiles.find(next_tile_id);
+		// First time finding this tile, make it black
 		if (black_tile == cur_black_tiles.end()) {
 			cur_black_tiles.insert(next_tile_id);
 		} else {
+			// Already found, flip it again
 			cur_black_tiles.erase(black_tile);
 		}
 	}
@@ -197,6 +240,14 @@ void problem_1::solve(const std::string& file_name)
 	output_answer(answer);
 }
 
+/*
+* Any black tile with zero or more than 2 black tiles immediately adjacent to it is flipped to white.
+* Any white tile with exactly 2 black tiles immediately adjacent to it is flipped to black.
+* Here, tiles immediately adjacent means the six tiles directly touching the tile in question.
+* The rules are applied simultaneously to every tile
+*/
+
+// How many tiles will be black after 100 days
 void problem_2::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);
@@ -205,6 +256,7 @@ void problem_2::solve(const std::string& file_name)
 		return;
 	}
 
+	// Get the initial state
 	tiles cur_black_tiles;
 	while (!input.eof()) {
 		std::string next_tile;
@@ -212,14 +264,16 @@ void problem_2::solve(const std::string& file_name)
 		coord next_tile_id = get_tile_coord(next_tile);
 		tiles::iterator black_tile = cur_black_tiles.find(next_tile_id);
 		if (black_tile == cur_black_tiles.end()) {
+			// First time finding this tile, make it black
 			cur_black_tiles.insert(next_tile_id);
-		}
-		else {
+		} else {
+			// Already found, flip it again
 			cur_black_tiles.erase(black_tile);
 		}
 	}
 	input.close();
 
+	// Flip for 100 days
 	for (int day = 0; day < 100; ++day)	{
 		tiles next_day_black_tiles;
 		get_next_day_black_tiles(&next_day_black_tiles, cur_black_tiles);

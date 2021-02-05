@@ -14,14 +14,17 @@ typedef std::vector<rule_num> sub_rule;
 class rule;
 typedef std::map<rule_num, rule*> rules;
 
+// A rule number and what it requires
 class rule {
 public:
+	virtual ~rule() {};
+
 	rule(rule_num num, unsigned int chars_required) : m_rule_num(num), m_chars_required(chars_required) {};
 	bool is_looping() const { return m_is_looping; }
 	void set_looping(bool is_looping) { m_is_looping = is_looping; }
 
-	virtual bool has_looping_rule(const rules& cur_rules) { return is_looping(); }
-	virtual unsigned int get_chars_required(const rules& cur_rules) { return m_chars_required; }
+	virtual bool has_looping_rule(const rules&) { return is_looping(); }
+	virtual unsigned int get_chars_required(const rules&) { return m_chars_required; }
 	virtual bool does_message_match(const rules& cur_rules, const std::string& input);
 
 protected:
@@ -30,6 +33,7 @@ protected:
 	unsigned int m_chars_required;
 };
 
+// A rule with multiple rules within
 class rule_of_rules : public rule {
 public:
 	rule_of_rules(rule_num num) : rule(num, 0) {};
@@ -44,29 +48,42 @@ private:
 	bool m_has_checked_for_loop = false;
 };
 
-class base_rule : public rule {
+// The base rule that is just the character
+class rule_char : public rule {
 public:
-	base_rule(rule_num num, char rule) : rule(num, 1), m_rule(rule) {};
+	rule_char(rule_num num, char rule) : rule(num, 1), m_rule(rule) {};
 
 	bool does_message_match(const rules& cur_rules, const std::string& input) override { return rule::does_message_match(cur_rules, input) && input[0] == m_rule; }
 private:
 	char m_rule;
 };
 
+// Does the message match this rule
+//
+// cur_rules:	The other current rules
+// input:		The input to read
 bool rule::does_message_match(const rules& cur_rules, const std::string& input)
 {
+	// For a base rule, we can only check if this one loops or the sizes match
 	return has_looping_rule(cur_rules) || input.size() == get_chars_required(cur_rules);
 }
 
+// Does this rule have a looping rule
+//
+// cur_rules:	The other current rules
 bool rule_of_rules::has_looping_rule(const rules& cur_rules) 
 { 
+	// Already cached
 	if (m_has_checked_for_loop) {
 		return m_has_loop;
 	}
 
 	m_has_checked_for_loop = true;
+	// Check if the base rule knows if this has a looping rule
+	// cur_rules is unused
 	m_has_loop = rule::has_looping_rule(cur_rules);
 
+	// Need to do deep dive of rules
 	if (!m_has_loop) {
 		for (const auto& cur_sub_rule : m_rules) {
 			for (const auto& cur_sub_rule_num : cur_sub_rule) {
@@ -81,15 +98,21 @@ bool rule_of_rules::has_looping_rule(const rules& cur_rules)
 	return m_has_loop;
 }
 
+// Get number of characters required to match this rule
+//
+// cur_rules:	The other current rules
 unsigned int rule_of_rules::get_chars_required(const rules& cur_rules)
 {
+	// Already cached
 	if (m_chars_required != 0) {
 		return m_chars_required;
 	}
 
+	// Sum sub rule required number
 	for (const sub_rule& cur_sub_rule : m_rules) {
 		unsigned int required_chars = 0;
 		for (const rule_num cur_rule_num : cur_sub_rule) {
+			// Recursive, set to 0
 			if (cur_rule_num == m_rule_num) {
 				required_chars = 0;
 				break;
@@ -104,12 +127,20 @@ unsigned int rule_of_rules::get_chars_required(const rules& cur_rules)
 	return m_chars_required;
 }
 
+// Test if the string matches the sub rules
+//
+// cur_rules:		The other current rules
+// cur_sub_rules:	The sub rules to check against
+// input:			The message
 bool test_sub_rule(const rules& cur_rules, const sub_rule& cur_sub_rules, const std::string& input)
 {
 	int offset = 0;
+	// Test each sub rule
 	for (size_t cur_sub_rule_ind = 0; cur_sub_rule_ind < cur_sub_rules.size(); ++cur_sub_rule_ind) {
 		auto cur_sub_rule = cur_rules.find(cur_sub_rules[cur_sub_rule_ind])->second;
+		// For looping subrules
 		if (cur_sub_rule->is_looping()) {
+			// Determine the maximum characters we can test with the looping sub rule
 			unsigned int chars_required_mult = cur_sub_rule->get_chars_required(cur_rules);
 			unsigned int max_chars_to_test = input.size() - offset;
 			unsigned int remaining_rules_chars = 0;
@@ -172,19 +203,23 @@ bool test_sub_rule(const rules& cur_rules, const sub_rule& cur_sub_rules, const 
 	return true;
 }
 
+// Test if the message matches the rules
 bool rule_of_rules::does_message_match(const rules& cur_rules, const std::string& input)
 {
 	if (input.empty()) {
 		return false;
 	}
 
+	// Doesn't match basic rule requirements
 	if (!rule::does_message_match(cur_rules, input)) {
 		return false;
 	}
 	
+	// If there's a looping rule within
 	if (has_looping_rule(cur_rules)) {
 		std::vector<unsigned int> looping_rules_chars;
 		unsigned int non_looping_rules_chars = 0;
+		// Add up looping and non-looping rule chars
 		for (auto& cur_rule_num : m_rules.back()) {
 			rule* cur_rule = cur_rules.find(cur_rule_num)->second;
 			if (cur_rule->is_looping()) {
@@ -193,6 +228,7 @@ bool rule_of_rules::does_message_match(const rules& cur_rules, const std::string
 				non_looping_rules_chars += cur_rule->get_chars_required(cur_rules);
 			}
 		}
+		// No looping chars and the size doesn't match the non-looping rules chars then it won't work
 		if (looping_rules_chars.empty()) {
 			if (input.size() % non_looping_rules_chars != 0) {
 				return false;
@@ -209,8 +245,8 @@ bool rule_of_rules::does_message_match(const rules& cur_rules, const std::string
 		}
 	}
 
+	// If this is a looping rule
 	if (is_looping()) {
-
 		unsigned int chars_required_mult = get_chars_required(cur_rules);
 		unsigned int max_chars_to_test = input.size();
 
@@ -234,6 +270,10 @@ bool rule_of_rules::does_message_match(const rules& cur_rules, const std::string
 	return false;
 }
 
+// Add rule to the list of current rules
+//
+// cur_rules:	(Output) The current rules that this will be added to
+// input:		The input to read the rule from
 static void add_rule_from_input(rules* cur_rules, std::string input)
 {
 	std::istringstream input_stream(input);
@@ -244,12 +284,14 @@ static void add_rule_from_input(rules* cur_rules, std::string input)
 	rule_num cur_rule_num = std::stoi(rule_num_s);
 
 	input_stream.ignore();
+	// If this is a character rule
 	if (input_stream.peek() == '\"') {
 		input_stream.ignore();
-		cur_rules->emplace(cur_rule_num, static_cast<rule*>(new base_rule(cur_rule_num, input_stream.get())));
+		cur_rules->emplace(cur_rule_num, static_cast<rule*>(new rule_char(cur_rule_num, input_stream.get())));
 		return;
 	}
 
+	// Otherwise its a rule of rules
 	rule_of_rules* new_rule = new rule_of_rules(cur_rule_num);
 	sub_rule cur_sub_rule;
 	bool cur_sub_rule_loops = false;
@@ -281,9 +323,18 @@ static void add_rule_from_input(rules* cur_rules, std::string input)
 	cur_rules->emplace(cur_rule_num, static_cast<rule*>(new_rule));
 }
 
+/*
+* They sent you a list of the rules valid messages should obey and a list of received messages they've collected so far
+* The rules for valid messages (the top part of your puzzle input) are numbered and build upon each other
+* The remaining rules list the sub-rules that must be followed
+* Some of the rules have multiple lists of sub-rules separated by a pipe (|). This means that at least one list of sub-rules must match
+* Fortunately, there are no loops in the rules, so the list of possible matches will be finite
+* The received messages (the bottom part of your puzzle input) need to be checked against the rules so you can determine which are valid and which are corrupted
+*/
+
+// How many messages completely match rule 0
 void problem_1::solve(const std::string& file_name)
 {
-	return;
 	std::ifstream input(file_name);
 
 	if (!input.is_open()) {
@@ -315,7 +366,6 @@ void problem_1::solve(const std::string& file_name)
 			++valid_messages;
 		}
 	}
-
 	input.close();
 
 	std::string answer;
@@ -323,6 +373,15 @@ void problem_1::solve(const std::string& file_name)
 	output_answer(answer);
 }
 
+/*
+* Completely replace rules 8: 42 and 11: 42 31 with the following:
+* 8: 42 | 42 8
+* 11: 42 31 | 42 11 31
+* Now, the rules do contain loops, and the list of messages they could hypothetically match is infinite
+* You only need to handle the rules you have
+*/
+
+// After updating rules 8 and 11, how many messages completely match rule 0
 void problem_2::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);

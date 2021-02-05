@@ -32,9 +32,13 @@ char pixel_type_to_character(pixel_type pixel_t)
 	return pixel_t == pixel_type::HASH ? PIXEL_TYPE_HASH : PIXEL_TYPE_DOT;
 }
 
+// An image's row is a vector of pixels
 typedef std::vector<pixel_type> image_row;
+
+// An image is a vector of rows
 typedef std::vector<image_row> image;
 
+// The different sides of a the tile
 enum class sides {
 	TOP = 0,
 	BOTTOM,
@@ -48,6 +52,7 @@ enum class sides {
 	NUM_SIDES
 };
 
+// Different operations we can use on the tile
 enum class operations {
 	FLIP_X = 0,
 	FLIP_Y,
@@ -55,14 +60,25 @@ enum class operations {
 	ROTATE_LEFT
 };
 
-typedef std::pair<sides, sides> test_edges; // Top, Left to be tested against another tile's Bottom and Right
+// Top, Left to be tested against another tile's Bottom and Right
+typedef std::pair<sides, sides> test_edges; 
+
+// Operations required to orient to a direction
 typedef std::vector<operations> operations_to_orientation;
+
+// A list of operations to get a pair of edges to be top and left
 typedef std::pair<test_edges, operations_to_orientation> test_case;
 
-static constexpr short int INVALID_SIDE_ID = 1 << 10;
-short int image_row_id(const image_row& row)
+// Each row contains 9 pixels
+// Each pixel can only be one of two types
+// Therefore we can convert each row into a unique 9 bit binary representation
+typedef short int side_id;
+static constexpr side_id INVALID_SIDE_ID = 1 << 10;
+
+// Get the uid for the row where the hashes are 1's
+side_id image_row_id(const image_row& row)
 {
-	short int id = 0;
+	side_id id = 0;
 	for (auto pixel_t_iter = row.rbegin(); pixel_t_iter != row.rend(); ++pixel_t_iter) {
 		id = id << 1;
 		if (*pixel_t_iter == pixel_type::HASH) {
@@ -71,17 +87,27 @@ short int image_row_id(const image_row& row)
 	}
 	return id;
 }
+
+// Lookup table
 static unsigned char Lookup_reverse[16] = {
 0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
 0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf, };
-short int reverse_id(const short int id)
+
+// Get the ID of the row that is the reverse of this one
+//
+// id:	Row to reverse and get ID
+//
+// Returns the ID of the reversed row
+side_id reverse_id(const side_id id)
 {
+	// Reverse each 4 bits of the 9 bit uid and reverse their order
 	return ((Lookup_reverse[id & 0xf] << 8) | (Lookup_reverse[(id >> 4) & 0xf] << 4) | (Lookup_reverse[id >> 8])) >> 2;
 }
 
-typedef short int side_id;
-typedef std::array<short int, 8> side_ids;
+// The side ids and reverse side ids for a tile
+typedef std::array<side_id, 8> side_ids;
 
+// Tile containing it's image, id, and side ids
 class tile {
 public:
 	tile() {};
@@ -112,10 +138,10 @@ protected:
 	unsigned int m_id = -1;
 	side_ids m_side_ids = { INVALID_SIDE_ID };
 };
+// Signitaure for tile operations
 typedef void (tile::* operation_sig)(void);
-typedef std::vector<tile> meta_image_row;
-typedef std::vector<meta_image_row> meta_image;
 
+// The different operations that can manipulate the tile
 operation_sig Operation_functions[] = {
 	&tile::flip_x_axis,
 	&tile::flip_y_axis,
@@ -123,6 +149,7 @@ operation_sig Operation_functions[] = {
 	&tile::rotate_left
 };
 
+// The test cases for checking if a tile can match with another
 std::array<test_case, 8> Test_cases = {
 	std::make_pair(std::make_pair(sides::TOP, sides::LEFT), operations_to_orientation{}),
 	std::make_pair(std::make_pair(sides::TOP_REVERSE, sides::RIGHT), operations_to_orientation{operations::FLIP_Y}),
@@ -137,17 +164,29 @@ std::array<test_case, 8> Test_cases = {
 	std::make_pair(std::make_pair(sides::LEFT_REVERSE, sides::BOTTOM), operations_to_orientation{operations::ROTATE_RIGHT}),
 };
 
+// A meta image row is a vector of tiles
+typedef std::vector<tile> meta_image_row;
+
+// A meta image is a vector of meta image rows
+typedef std::vector<meta_image_row> meta_image;
+
 template <typename T>
 using is_vector = std::is_same<T, std::vector<typename T::value_type, typename T::allocator_type>>;
 template <typename T, typename R>
 using enable_if_vector = typename std::enable_if<is_vector<T>::value, R>::type;
 
+// Flip an array along the x-axis
+// 
+// cur_array<>:	(Output) The array to be flipped
 template<class array_class>
 enable_if_vector<array_class, void> flip_x_axis(array_class* cur_array)
 {
 	std::reverse(cur_array->begin(), cur_array->end());
 }
 
+// Flip an array along the y-axis
+// 
+// cur_array<<>>:	(Output) The array to be flipped
 template<class array_class>
 enable_if_vector<array_class, void> flip_y_axis(array_class* cur_array)
 {
@@ -156,6 +195,9 @@ enable_if_vector<array_class, void> flip_y_axis(array_class* cur_array)
 	}
 }
 
+// Rotate an array clockwise
+// 
+// cur_array<<>>:	(Output) The array to be rotated
 template<class array_class>
 enable_if_vector<array_class, void> rotate_right(array_class* cur_array)
 {
@@ -171,6 +213,9 @@ enable_if_vector<array_class, void> rotate_right(array_class* cur_array)
 	cur_array->swap(temp_array);
 }
 
+// Rotate an array counter-clockwise
+// 
+// cur_array<<>>:	(Output) The array to be rotated
 template<class array_class>
 enable_if_vector<array_class, void> rotate_left(array_class* cur_array)
 {
@@ -186,6 +231,7 @@ enable_if_vector<array_class, void> rotate_left(array_class* cur_array)
 	cur_array->swap(temp_array);
 }
 
+// Construct a tile from input
 tile::tile(std::ifstream& input)
 {
 	std::string tile_id_s;
@@ -193,11 +239,13 @@ tile::tile(std::ifstream& input)
 
 	m_id = std::stoi(tile_id_s.substr(TILE_ID_OFFSET));
 
+	// Cache the edges
 	image_row top, bottom, left, right;
 
 	std::string image_row_s;
 	std::getline(input, image_row_s);
 	image_row new_row;
+	// Extract all the rows
 	while (!image_row_s.empty()) {
 		new_row.clear();
 		for (const char image_pixel : image_row_s) {
@@ -220,6 +268,7 @@ tile::tile(std::ifstream& input)
 	}
 	bottom.swap(new_row);
 
+	// Cache the side ids
 	m_side_ids[static_cast<int>(sides::TOP)] = image_row_id(top);
 	m_side_ids[static_cast<int>(sides::BOTTOM)] = image_row_id(bottom);
 	m_side_ids[static_cast<int>(sides::RIGHT)] = image_row_id(right);
@@ -230,6 +279,10 @@ tile::tile(std::ifstream& input)
 	m_side_ids[static_cast<int>(sides::LEFT_REVERSE)] = reverse_id(m_side_ids[static_cast<int>(sides::LEFT)]);
 }
 
+// Get the string for the given row
+//
+// row_s:	(Output) The string made by the row
+// row:		The row index
 void tile::get_row_string(std::string* row_s, size_t row) const
 {
 	for (pixel_type pixel : m_image[row]) {
@@ -237,6 +290,9 @@ void tile::get_row_string(std::string* row_s, size_t row) const
 	}
 }
 
+// Print the row
+//
+// row:	Row index to print
 void tile::print_row(size_t row) const
 {
 	std::string row_s;
@@ -244,6 +300,7 @@ void tile::print_row(size_t row) const
 	std::cout << row_s;
 }
 
+// Print the tile
 void tile::print() const
 {
 	for (size_t row = 0; row < get_num_rows(); ++row) {
@@ -253,6 +310,7 @@ void tile::print() const
 	std::cout << '\n';
 }
 
+// Print the tile and its info
 void tile::print_all() const
 {
 	std::cout << "ID: " << m_id << '\n';
@@ -263,8 +321,10 @@ void tile::print_all() const
 	std::cout << '\t' << m_side_ids[static_cast<int>(sides::BOTTOM)] << "\t\t\t" << m_side_ids[static_cast<int>(sides::BOTTOM_REVERSE)] << '\n';
 }
 
+// Rotate the tile clockwise
 void tile::rotate_right()
 {
+	// Do the generic rotate
 	::rotate_right(&m_image);
 
 	// Make T be on the right and R on the top
@@ -280,8 +340,10 @@ void tile::rotate_right()
 	std::swap(m_side_ids[static_cast<int>(sides::BOTTOM_REVERSE)], m_side_ids[static_cast<int>(sides::LEFT_REVERSE)]);
 }
 
+// Rotate the tile counter-clockwise
 void tile::rotate_left()
 {
+	// Do the generic rotate
 	::rotate_left(&m_image);
 
 	// Make B be on the left and L on the bottom
@@ -297,8 +359,10 @@ void tile::rotate_left()
 	std::swap(m_side_ids[static_cast<int>(sides::TOP_REVERSE)], m_side_ids[static_cast<int>(sides::RIGHT_REVERSE)]);
 }
 
+// Flip the tile along the x axis
 void tile::flip_x_axis()
 {
+	// Do the generic flip
 	::flip_x_axis(&m_image);
 
 	// Make T be on bottom and B on top
@@ -310,8 +374,10 @@ void tile::flip_x_axis()
 	std::swap(m_side_ids[static_cast<int>(sides::RIGHT_REVERSE)], m_side_ids[static_cast<int>(sides::RIGHT)]);
 }
 
+// Flip the tile along the y axis
 void tile::flip_y_axis()
 {
+	// Do the generic flip
 	::flip_y_axis(&m_image);
 
 	// Make L be on the right and R on the left
@@ -323,6 +389,9 @@ void tile::flip_y_axis()
 	std::swap(m_side_ids[static_cast<int>(sides::BOTTOM_REVERSE)], m_side_ids[static_cast<int>(sides::BOTTOM)]);
 }
 
+// Do the corresponding operations to change the orientation
+//
+// ops:	The operations to perform
 void tile::do_operations(const operations_to_orientation& ops)
 {
 	for (const operations op : ops) {
@@ -330,18 +399,25 @@ void tile::do_operations(const operations_to_orientation& ops)
 	}
 }
 
+// Remove the borders on the tile
 void tile::remove_borders()
 {
-	// make the first and last row the last two elements
+	// Make the first and last row the last two elements
 	std::rotate(m_image.begin(), m_image.begin() + 1, m_image.end());
 	m_image.resize(m_image.size() - 2);
 
+	// Rotate each row's vector and get rid of the two on the end as they were the first and last
 	for (image_row& row : m_image) {
 		std::rotate(row.begin(), row.begin() + 1, row.end());
 		row.resize(row.size() - 2);
 	}
 }
 
+
+// Print the meta image
+//
+// cur_meta_image:	Meta image to print
+// all:					(Optional) Whether to print all info
 void print_meta_image(const meta_image& cur_meta_image, bool all = false)
 {
 	if (cur_meta_image.empty() || cur_meta_image.front().empty()) {
@@ -375,6 +451,14 @@ void print_meta_image(const meta_image& cur_meta_image, bool all = false)
 	std::cout << std::string(16 * cur_meta_image.front().size(), '-') << '\n';
 }
 
+// Fill the meta image with the tiles in a given direction
+//
+// cur_meta_image:			(Output) Meta image to fill
+// remaining_tiles:			(Output) The tiles to try from. Everything les than the index has been used
+// reamining_tile_index:	(Output) The index from which tiles have not been used yet
+// start_y:						The y value start at
+// add_direction:				What direction to add to
+// width:						The width to fill to
 void fill_out(meta_image* cur_meta_image, std::vector<tile>* remaining_tiles, size_t* remaining_tile_index, const int start_y, const sides add_direction, const int width) {
 	// Keep searching until we're at the edge
 	const tile* cur_tile_p = &(cur_meta_image->back().front());
@@ -459,6 +543,10 @@ void fill_out(meta_image* cur_meta_image, std::vector<tile>* remaining_tiles, si
 	} while (found_tile_p != nullptr);
 }
 
+// Create the meta image from the given tiles
+//
+// cur_meta_image:	(Output) The made meta image
+// remaining_tiels:	The tiles left to add
 void create_meta_image(meta_image* cur_meta_image, std::vector<tile>* remaining_tiles)
 {
 	// No tiles remaining
@@ -471,12 +559,26 @@ void create_meta_image(meta_image* cur_meta_image, std::vector<tile>* remaining_
 	tile* cur_tile_p = &((*remaining_tiles)[cur_tile_index++]);
 	cur_meta_image->emplace_back(meta_image_row{ *cur_tile_p });	
 
+	// Fill the meta image starting from a random tile and then filling the rest of the right side of the row
 	fill_out(cur_meta_image, remaining_tiles, &cur_tile_index, 0, sides::RIGHT, width);
+	// Then filling the left side of the row from the start
 	fill_out(cur_meta_image, remaining_tiles, &cur_tile_index, 0, sides::LEFT, width);
+	// Then fill the rows above this one
 	fill_out(cur_meta_image, remaining_tiles, &cur_tile_index, 0, sides::TOP, width);
+	// Then fill the rows below the start
 	fill_out(cur_meta_image, remaining_tiles, &cur_tile_index, cur_meta_image->size(), sides::BOTTOM, width);
 }
 
+/*
+* The data actually contains many small images created by the satellite's camera array.
+* The camera array consists of many cameras; rather than produce a single square image, they produce many smaller square image tiles that need to be reassembled back into a single image.
+* Each camera in the camera array returns a single monochrome image tile with a random unique ID number. The tiles (your puzzle input) arrived in a random order
+* Each image tile has been rotated and flipped to a random orientation. Your first task is to reassemble the original image by orienting the tiles so they fit together
+* ach tile's image data includes a border that should line up exactly with its adjacent tiles. All tiles have this border, and the border lines up exactly when the tiles are both oriented correctly.
+* Tiles at the edge of the image also have this border, but the outermost edges won't line up with any other tiles
+*/
+
+// What do you get if you multiply together the IDs of the four corner tiles
 void problem_1::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);
@@ -485,16 +587,18 @@ void problem_1::solve(const std::string& file_name)
 		return;
 	}
 
+	// Get all the tiles
 	std::vector<tile> tiles;
 	while (!input.eof()) {
 		tiles.emplace_back(tile(input));
 	}
-
 	input.close();
 
+	// Create the meta image from the tiles
 	meta_image cur_meta_image;
 	create_meta_image(&cur_meta_image, &tiles);
 
+	// Multiply the four corners ids
 	long long int corners = 1;
 	corners *= cur_meta_image.front().front().get_id();
 	corners *= cur_meta_image.front().back().get_id();
@@ -506,6 +610,12 @@ void problem_1::solve(const std::string& file_name)
 	output_answer(answer); 
 }
 
+// Add a dragon to a string representation of the meta image
+//
+// meta_image_s:			(Output) The meta image string to put the dragon in
+// row_length:				The length of each row in pixels
+// string_row:				The row the first dragon line is on in the array
+// offset_from_newline:	The offset from the previous new line
 void add_dragon(std::string* meta_image_s, size_t row_length, size_t string_row, size_t offset_from_newline)
 {
 	(*meta_image_s)[((row_length + 1) * (string_row - 1)) + offset_from_newline + 18] = 'O';
@@ -529,6 +639,10 @@ void add_dragon(std::string* meta_image_s, size_t row_length, size_t string_row,
 	(*meta_image_s)[bot_offset + 16] = PIXEL_TYPE_DRAG;
 }
 
+// Get the meta image as a string
+//
+// meta_image_s:			(Output) The meta image string
+// meta_image_strings:	The rows of the meta image in string form
 void get_meta_image_string(std::string* meta_image_s, const std::vector<std::string>& meta_image_strings)
 {
 	for (const std::string& row_s : meta_image_strings) {
@@ -537,6 +651,11 @@ void get_meta_image_string(std::string* meta_image_s, const std::vector<std::str
 	}
 }
 
+// Count the amount of dragons in the image
+//
+// cur_meta_image:	Image to search
+// 
+// Return the number of dragons found
 unsigned int get_dragons_count(meta_image* cur_meta_image)
 {
 	// Operations to test every orientation in succession
@@ -550,12 +669,14 @@ unsigned int get_dragons_count(meta_image* cur_meta_image)
 		operations::FLIP_Y,
 	};
 
+	// Operation to function
 	static const std::map<operations, void(*)(std::vector<std::string>*)> ops_to_funcs = {
 		{ operations::FLIP_X, flip_x_axis<std::vector<std::string>> },
 		{ operations::FLIP_Y, flip_y_axis<std::vector<std::string>> },
 		{ operations::ROTATE_RIGHT, rotate_right<std::vector<std::string>> },
 	};
 
+	// Convert the meta image into a vector of each row as a string
 	std::vector<std::string> meta_image_strings;
 	for (const meta_image_row& row : *cur_meta_image) {
 		for (size_t row_ind = 0; row_ind < row.front().get_num_rows(); ++row_ind) {
@@ -622,6 +743,16 @@ unsigned int get_dragons_count(meta_image* cur_meta_image)
 	return num_dragons;
 }
 
+/*
+* Now, you're ready to check the image for sea monsters. The borders of each tile are not part of the actual image; start by removing them
+* a sea monster will look like this:
+*                   # 
+* #    ##    ##    ###
+*  #  #  #  #  #  #   
+* The spaces can be anything; only the # need to match. Also, you might need to rotate or flip your image before it's oriented correctly to find sea monsters
+*/
+
+// How many # are not part of a sea monster
 void problem_2::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);
@@ -630,6 +761,7 @@ void problem_2::solve(const std::string& file_name)
 		return;
 	}
 
+	// Get all the tiles
 	std::vector<tile> tiles;
 	while (!input.eof()) {
 		tiles.emplace_back(tile(input));
@@ -637,9 +769,11 @@ void problem_2::solve(const std::string& file_name)
 
 	input.close();
 
+	// Create the meta image from the tiles
 	meta_image cur_meta_image;
 	create_meta_image(&cur_meta_image, &tiles);
 
+	// Remove borders and get the total amount of hashes
 	int hash_num = 0;
 	for (meta_image_row& row : cur_meta_image) {
 		for (tile& cur_tile : row) {
@@ -648,6 +782,7 @@ void problem_2::solve(const std::string& file_name)
 		}
 	}
 
+	// Remove the hashes used by the dragons
 	hash_num -= get_dragons_count(&cur_meta_image) * DRAGON_HASHES_COUNT;
 
 	std::string answer;

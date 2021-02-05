@@ -2,136 +2,27 @@
 
 #include "../common_includes.h"
 
-PROBLEM_CLASS_CPP(23);
-//
-//class cup {
-//public:
-//	cup(int label) : m_label(label) {};
-//
-//	cup* get_prev_cup() const { return m_prev_cup; }
-//	cup* get_next_cup() const { return m_next_cup; }
-//	void set_next_cup(cup* next_cup) { m_next_cup = next_cup; }
-//	void set_prev_cup(cup* next_cup) { m_prev_cup = next_cup; }
-//	int get_label() const { return m_label; }
-//
-//private:
-//	int m_label;
-//	cup* m_prev_cup = nullptr;
-//	cup* m_next_cup = nullptr;
-//};
-//
-//// Delete all cups connected to this cup
-//void delete_cups(cup* start_cup)
-//{
-//	// Break the circular link
-//	start_cup->get_prev_cup()->set_next_cup(nullptr);
-//
-//	// Delete each cup through the list
-//	cup* current_cup = start_cup;
-//	cup* next_cup = nullptr;
-//	while (current_cup != nullptr) {
-//		next_cup = current_cup->get_next_cup();
-//		delete current_cup;
-//		current_cup = next_cup;
-//	}
-//}
-//
-//// Find the cup with the label
-//const cup* find_cup(int label, const cup* start_cup, bool forward)
-//{
-//	if (forward) {
-//		while (start_cup->get_label() != label) {
-//			start_cup = start_cup->get_next_cup();
-//		}
-//	} else {
-//		while (start_cup->get_label() != label) {
-//			start_cup = start_cup->get_prev_cup();
-//		}
-//	}
-//	return start_cup;
-//}
-//
-//// Find the cup with the label
-//cup* find_cup(int label, cup* start_cup, bool forward)
-//{
-//	return const_cast<cup*>(find_cup(label, const_cast<const cup*>(start_cup), forward));
-//}
-//
-//bool is_cup_within(int label, cup* start_cup, size_t amount_of_cups)
-//{
-//	for (size_t cur_cup = 0; cur_cup < amount_of_cups; ++cur_cup) {
-//		start_cup = start_cup->get_next_cup();
-//		if (start_cup->get_label() == label) {
-//			return true;
-//		}
-//	}
-//	return false;
-//}
-//
-//// Get the string produced from the right circular link of the cups starting from the cup labeled 1
-//void get_cups_string(std::string* cup_string, const cup* start_cup)
-//{
-//	const cup* cur_cup = find_cup(1, start_cup, true);
-//	cup_string->clear();
-//	cur_cup = cur_cup->get_next_cup();
-//	while (cur_cup->get_label() != 1) {
-//		cup_string->append(std::to_string(cur_cup->get_label()));
-//		cur_cup = cur_cup->get_next_cup();
-//	}
-//}
-//
-//// Do the move
-//void do_move(cup** current_cups, int max_label)
-//{
-//	int next_cup_id = (*current_cups)->get_label();
-//	next_cup_id = next_cup_id == 1 ? max_label : next_cup_id - 1;
-//
-//	while (is_cup_within(next_cup_id, *current_cups, 3)) {
-//		next_cup_id = next_cup_id == 1 ? max_label : next_cup_id - 1;
-//	}
-//
-//	cup* next_cup = find_cup(next_cup_id, *current_cups, false);
-//	cup* old_next_cup_next = next_cup->get_next_cup();
-//	cup* cups_remove_end = (*current_cups)->get_next_cup()->get_next_cup()->get_next_cup();
-//
-//	// Link next start with the 3 removed cups
-//	next_cup->set_next_cup((*current_cups)->get_next_cup());
-//	next_cup->get_next_cup()->set_prev_cup(next_cup);
-//
-//	// Link the current start cup to the end of the 3 removed cups
-//	(*current_cups)->set_next_cup(cups_remove_end->get_next_cup());
-//	(*current_cups)->get_next_cup()->set_prev_cup(*current_cups);
-//
-//	// Link the end of the 3 removed cups to their new next cup
-//	cups_remove_end->set_next_cup(old_next_cup_next);
-//	old_next_cup_next->set_prev_cup(cups_remove_end);
-//
-//	*current_cups = (*current_cups)->get_next_cup();
-//}
-//
-//// Print the current state of the cups
-//void print_cups(cup* current_cup)
-//{
-//	int start_label = current_cup->get_label();
-//	std::cout << start_label << ' ';
-//	current_cup = current_cup->get_next_cup();
-//	while (current_cup->get_label() != start_label) {
-//		std::cout << current_cup->get_label() << ' ';
-//		current_cup = current_cup->get_next_cup();
-//	}
-//	std::cout << '\n';
-//}
-
 #include <unordered_map>
+
+PROBLEM_CLASS_CPP(23);
+
 typedef unsigned int label;
 
+// Cup and it's next cup
 typedef std::pair<const label, void*> cup;
 typedef std::unordered_map<label, void*> cup_order;
 
+// Get the next cup from it's cached iter
 inline cup* get_next_cup(cup* cur_cup) {
 	return static_cast<cup*>(cur_cup->second);
 }
 
+// Is the cup within the start cup to its 2 next neighbors
+// 
+// start_cup:		Cup to start the search
+// search_label:	Cup we're searching for
+//
+// Returns true if it's within
 bool is_cup_within(const cup& start_cup, const label search_label)
 {
 	auto current_cup = static_cast<cup*>(start_cup.second);
@@ -144,12 +35,17 @@ bool is_cup_within(const cup& start_cup, const label search_label)
 	return false;
 }
 
-
-void do_move(cup_order* cups, cup** current_cup, const label max_label)
+// Do the move
+//
+// current_cup:	(Output) The current cup
+// cups:				(Output) The cups to work with
+// max_label:		The maximum label within these cups
+void do_move(cup** current_cup, cup_order* cups, const label max_label)
 {
 	int next_cup_id = (*current_cup)->first;
 	next_cup_id = next_cup_id == 1 ? max_label : next_cup_id - 1;
 
+	// Get the next ID that isn't within the current cup and its 2 next neighbors
 	while (is_cup_within(*(*current_cup), next_cup_id)) {
 		next_cup_id = next_cup_id == 1 ? max_label : next_cup_id - 1;
 	}
@@ -195,6 +91,20 @@ void print_cups(cup* current_cup)
 	std::cout << '\n';
 }
 
+/*
+* The cups will be arranged in a circle and labeled clockwise
+* the first cup in your list as the current cup. The crab is then going to do 100 moves.
+* Each move, the crab does the following actions:
+*   The crab picks up the three cups that are immediately clockwise of the current cup. They are removed from the circle; cup spacing is adjusted as necessary to maintain the circle.
+*   The crab selects a destination cup: the cup with a label equal to the current cup's label minus one. 
+*     If this would select one of the cups that was just picked up, the crab will keep subtracting one until it finds a cup that wasn't just picked up.
+*     If at any point in this process the value goes below the lowest value on any cup's label, it wraps around to the highest value on any cup's label instead.
+*   The crab places the cups it just picked up so that they are immediately clockwise of the destination cup. They keep the same order as when they were picked up.
+*   The crab selects a new current cup: the cup which is immediately clockwise of the current cup.
+* Starting after the cup labeled 1, collect the other cups' labels clockwise into a single string with no extra characters
+*/
+
+// What are the labels on the cups after cup 1
 void problem_1::solve(const std::string& file_name)
 {
 	std::ifstream input(file_name);
@@ -203,6 +113,7 @@ void problem_1::solve(const std::string& file_name)
 		return;
 	}
 
+	// Get all the input cups and link them together
 	cup* head_cup = nullptr;
 	cup* prev_cup = nullptr;
 	cup_order cups;
@@ -227,11 +138,12 @@ void problem_1::solve(const std::string& file_name)
 
 	(static_cast<cup*>(prev_cup))->second = head_cup;
 
+	// Do the moves for the amount of times
 	cup* current_cup = head_cup;
 	const int max_moves = 100;
 	const int max_cup_id = 9;
 	for (int i = 0; i < max_moves; ++i) {
-		do_move(&cups, &current_cup, max_cup_id);
+		do_move(&current_cup, &cups, max_cup_id);
 	}
 
 	std::string answer;
@@ -247,6 +159,7 @@ void problem_2::solve(const std::string& file_name)
 		return;
 	}
 
+	// Get all the input cups and link them together
 	cup* head_cup = nullptr;
 	cup* prev_cup = nullptr;
 	cup_order cups;
@@ -269,6 +182,7 @@ void problem_2::solve(const std::string& file_name)
 		return;
 	}
 
+	// Add the extra cups
 	int id = 9;
 	const int max_cup_id = 1000000;
 	while (id++ < max_cup_id) {
@@ -278,10 +192,11 @@ void problem_2::solve(const std::string& file_name)
 	}
 	(static_cast<cup *>(prev_cup))->second = head_cup;
 
+	// Do the moves for the amount of times
 	cup* current_cup = head_cup;
 	const int max_moves = 10000000;
 	for (int i = 0; i < max_moves; ++i) {
-		do_move(&cups, &current_cup, max_cup_id);
+		do_move(&current_cup, &cups, max_cup_id);
 	}
 
 	cup* cup_1 = &*(cups.find(1));
